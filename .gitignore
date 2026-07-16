@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+coverage/
+
+# Expo
+apps/staff/.expo/
+apps/staff/.expo-export/
+apps/staff/android/
+apps/staff/ios/
+*.orig.*
+web-build/
+expo-env.d.ts
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Supabase
+packages/db/.temp/
+services/**/.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test / Playwright
+test-results/
+playwright-report/
+.playwright/

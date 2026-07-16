@@ -1,0 +1,14 @@
+# Golden flow #7 (§12.2): Template editor — typing „ą" flips the counter to UCS-2/70
+# and shows the cost warning. The business-model guardrail (§7.5).
+appId: pl.stoliq.staff
+---
+- launchApp
+- tapOn: "Ustawienia"        # settings tab (staff.tabSettings)
+- assertVisible: "Szablony.*" # settings.templates
+# Focus a template field and insert a Polish diacritic.
+- tapOn:
+    id: "template-table_ready"
+- inputText: "ą"
+# The live segment counter must switch encoding and warn.
+- assertVisible: "UCS-2"
+- assertVisible: "Znaki.*podwoją koszt SMS"   # settings.templateUcs2Warning

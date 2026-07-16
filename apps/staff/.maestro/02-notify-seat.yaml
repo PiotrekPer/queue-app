@@ -1,0 +1,12 @@
+# Golden flow #2 (§12.2, staff half): Powiadom → status becomes Powiadomiono → Posadź (seat).
+# The guest-page half (flip to STOLIK GOTOWY, tap „Już idziemy") is covered by Playwright.
+appId: pl.stoliq.staff
+---
+- launchApp
+# On a waiting card, the primary action is Powiadom.
+- tapOn: "Powiadom"
+- assertVisible: "Powiadomiono.*"   # amber status chip with the notified time
+# Seat the party (button form; swipe-to-seat is exercised manually).
+- tapOn: "Posadź"
+# A 5s Undo toast appears after every mutation.
+- assertVisible: "Cofnij"

@@ -1,0 +1,97 @@
+/**
+ * Polish (default) UI copy. Warm-direct, „Ty" form, zero corporate-speak,
+ * at most one emoji per message (§9.5). Buttons say what happens.
+ * This object is the canonical shape; `en.ts` must mirror its keys.
+ */
+export const pl = {
+  common: {
+    appName: 'Stoliq',
+    live: 'na żywo',
+    minutesShort: 'min',
+    people: 'os.',
+    ticketNo: 'Nr {{n}}',
+    back: 'Wróć',
+    cancel: 'Anuluj',
+    save: 'Zapisz',
+    undo: 'Cofnij',
+    loading: 'Ładowanie…',
+  },
+  guest: {
+    inQueue: 'w kolejce',
+    positionCaption: 'w kolejce',
+    aboutMinutes: 'ok. {{min}} min',
+    soon: 'już za chwilę',
+    overdue: 'przepraszamy, jeszcze moment 🙏',
+    ready: 'STOLIK GOTOWY',
+    ready_hold: 'czekamy na Was do {{time}}',
+    onWayTitle: 'Świetnie, do zobaczenia za chwilę!',
+    seatedTitle: 'Smacznego! 🍽',
+    endedTitle: 'Ta wizyta została zakończona.',
+    endedRejoin: 'Dołącz ponownie przy wejściu.',
+    notFoundTitle: 'Nie znaleźliśmy tego numerka.',
+    phoneOptInTitle: '📱 Dostań SMS gdy stolik będzie gotowy',
+    phoneInputLabel: 'Twój numer telefonu',
+    phoneConsent:
+      'Numer użyjemy tylko do powiadomień o tej wizycie. Auto-usunięcie po {{retention}} dniach.',
+    marketingConsent: 'Chcę dostawać okazjonalne oferty od {{venue}}.',
+    actionOnWay: 'Już idziemy',
+    actionDelay: '+5 minut',
+    actionCancel: 'Rezygnujemy',
+    cancelConfirmTitle: 'Na pewno?',
+    cancelConfirmBody: 'Stracicie miejsce w kolejce.',
+    footer: 'Stoliq · Twoje dane znikną automatycznie po {{retention}} dniach · RODO',
+  },
+  staff: {
+    tabQueue: 'Kolejka',
+    tabToday: 'Dziś',
+    tabSettings: 'Ustawienia',
+    queueCount: 'W kolejce: {{n}}',
+    add: '＋ Dodaj',
+    emptyTitle: 'Pusta kolejka.',
+    emptySubtitle: 'Miły widok — albo cisza przed burzą.',
+    statusWaiting: 'Czeka',
+    statusNotified: 'Powiadomiono {{time}}',
+    statusOnWay: 'W drodze',
+    chipDelay: '+5 min',
+    actionNotify: 'Powiadom',
+    actionSeat: 'Posadź',
+    actionSkip: 'Pomiń',
+    actionRemove: 'Usuń',
+    actionNoShow: 'Nie przyszli',
+    actionRenotify: 'Powiadom ponownie',
+    elapsedOfQuote: '{{elapsed}} / {{quote}} min',
+    smsFailed: 'SMS nie doszedł. Sprawdź numer albo powiadom ponownie.',
+    undoToast: 'Cofnij',
+    guestCancelledToast: '{{name}} ({{size}} os.) zrezygnowała',
+    add_step_size: 'Ile osób?',
+    add_step_name: 'Imię (opcjonalnie)',
+    add_skipName: 'Pomiń →',
+    qr_scanPrompt: 'Zeskanuj, aby śledzić kolejkę',
+    qr_adjustQuote: 'Dotknij, aby zmienić',
+    qr_done: 'Gotowe',
+  },
+  settings: {
+    venueBasics: 'Podstawowe',
+    holdTimer: 'Czas rezerwacji stolika',
+    headsUp: 'Uprzedzenie',
+    quoteDefaults: 'Domyślny czas oczekiwania',
+    templates: 'Szablony wiadomości',
+    templateUcs2Warning: 'Znaki ą/ę/ś podwoją koszt SMS',
+    segmentCounter: '{{chars}} znaków · {{segments}} SMS · {{encoding}}',
+    staffInvites: 'Zespół',
+    channels: 'Kanały',
+    smsBalance: 'Saldo SMS: {{amount}} zł',
+    topUp: 'Doładuj',
+    rodoTitle: 'RODO',
+    rodoRetention: 'Dane gości usuwamy automatycznie',
+    rodoRetentionDays: 'Przechowywanie: {{days}} dni',
+    plan: 'Plan i płatności',
+  },
+} as const;
+
+/** Widen all leaf string literals to `string` so `en.ts` mirrors the key shape
+ * (not the Polish values) via `satisfies Translation`. */
+type Stringify<T> = {
+  [K in keyof T]: T[K] extends string ? string : Stringify<T[K]>;
+};
+export type Translation = Stringify<typeof pl>;

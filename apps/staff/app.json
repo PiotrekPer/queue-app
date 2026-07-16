@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Stoliq",
+    "slug": "stoliq-staff",
+    "scheme": "stoliq",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#151210",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#151210",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "pl.stoliq.staff"
+    },
+    "android": {
+      "package": "pl.stoliq.staff",
+      "adaptiveIcon": {
+        "backgroundColor": "#151210"
+      }
+    },
+    "plugins": ["expo-router", "expo-font", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

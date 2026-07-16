@@ -1,0 +1,15 @@
+# Golden flow #1 (§12.2): Add party (size → skip name → QR) → card appears on Kolejka.
+appId: pl.stoliq.staff
+---
+- launchApp:
+    clearState: true
+- tapOn: "Dodaj"          # ＋ Dodaj (staff.add)
+# Step 1 — party size grid: tap "4"
+- tapOn: "4"
+# Step 2 — name step: skip it (equally prominent)
+- tapOn: "Pomiń"          # Pomiń → (staff.add_skipName)
+# QR screen (the only light screen) — confirm the ticket number + quote render, then close
+- assertVisible: ".*min.*"   # the huge auto-quote e.g. "ok. ~25 min"
+- tapOn: "Gotowe"          # staff.qr_done
+# Back on Kolejka — the new "· 4 os." card is present
+- assertVisible: ".*4 os.*"

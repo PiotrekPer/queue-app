@@ -1,0 +1,5 @@
+# Maestro E2E — Stoliq staff app golden flows (§12.2).
+# Run: maestro test apps/staff/.maestro (needs a running dev client / build on a device/emulator).
+appId: pl.stoliq.staff
+---
+# Shared: app launches on Kolejka (default tab).

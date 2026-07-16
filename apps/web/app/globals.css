@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+/* Design tokens (hex is law, §9.2) — generated from packages/ui-tokens/tokens.json */
+@import '../../../packages/ui-tokens/dist/theme.css';
+
+/* Wire the token font families to the next/font variables set in layout.tsx,
+   with graceful fallbacks to the named Google Font + system stack. */
+:root {
+  --font-display: var(--font-bricolage), 'Bricolage Grotesque', ui-sans-serif, sans-serif;
+  --font-ui: var(--font-schibsted), 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex), 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+  }
+  /* ALWAYS tabular-nums for positions, timers, ETAs, prices (§2). */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+}
+
+/* The one skeuomorphic detail: the numerek's perforated top edge (§9.4). */
+@utility perforated-top {
+  -webkit-mask-image: radial-gradient(circle 6px at 6px 0, transparent 6px, black 6.5px);
+  mask-image: radial-gradient(circle 6px at 6px 0, transparent 6px, black 6.5px);
+  -webkit-mask-size: 18px 100%;
+  mask-size: 18px 100%;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+}

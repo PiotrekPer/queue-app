@@ -1,0 +1,31 @@
+{
+  "name": "@stoliq/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/generated/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed": "tsx seed.ts",
+    "types": "echo 'Run: supabase gen types typescript --linked > src/generated/types.ts'",
+    "clean": "rimraf .turbo coverage *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@stoliq/core": "workspace:*",
+    "@supabase/supabase-js": "^2.47.10"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.4.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.2"
+  }
+}

@@ -1,0 +1,63 @@
+/*
+ * Guest-surface animations (§9.2 motion). Kept local to the guest track so the
+ * page ships almost no JS. All motion respects prefers-reduced-motion:
+ * the stamp scale/rotate collapses to a crossfade, the live-dot stops pulsing.
+ */
+
+/* The one theatrical moment: STOLIK GOTOWY stamp (§9.4).
+   motion.stamp = scale 1.4→1, rotate -8deg→-3deg, opacity 0→1, 240ms emph. */
+@keyframes stoliq-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.4);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-3deg) scale(1);
+  }
+}
+
+.stoliq-stamp {
+  transform: rotate(-3deg);
+  animation: stoliq-stamp 240ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+/* Pulsing „na żywo" dot — 2s loop (§9.4). */
+@keyframes stoliq-livedot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.72);
+  }
+}
+
+.stoliq-livedot {
+  animation: stoliq-livedot 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stoliq-stamp {
+    /* crossfade only — no scale/rotate motion */
+    animation: none;
+    transform: rotate(-3deg);
+  }
+  .stoliq-stamp-fade {
+    animation: stoliq-fade 240ms ease both;
+  }
+  .stoliq-livedot {
+    animation: none;
+  }
+}
+
+@keyframes stoliq-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
