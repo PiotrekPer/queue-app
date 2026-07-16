@@ -28,6 +28,7 @@ import {
   type VisitStatus,
 } from '@stoliq/core';
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import { useEffect } from 'react';
 import { fireHaptic } from '@/lib/haptics';
 import { hasBackend } from '@/lib/env';
@@ -61,9 +62,11 @@ interface QueueState {
   upsertVisit: (visit: Visit) => void;
   removeVisit: (id: string) => void;
 
-  addVisit: (input: CreateVisitInput) => Visit;
+  addVisit: (input: CreateVisitInput) => Promise<Visit>;
   applyIntent: (visitId: string, intent: TransitionIntent, ctx?: IntentContext) => void;
   undoLast: () => void;
+  /** Clear all state (called on sign-out so the next login re-hydrates fresh). */
+  reset: () => void;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────
@@ -150,32 +153,34 @@ function rankAfterSkip(visits: readonly Visit[], skippedId: string): number {
 
 // ─── background persistence (no-op without a backend) ───────────────────────
 
-function persistCreate(visit: Visit): void {
-  if (!hasBackend) return;
-  void supabase
-    .rpc('create_visit', {
-      p_venue_id: visit.venue_id,
-      p_party_size: visit.party_size,
-      p_display_name: visit.display_name,
-      p_quote_minutes: visit.quote_minutes,
-      p_quote_source: visit.quote_source,
-      p_public_token: visit.public_token,
-    })
-    .then(({ error }) => {
-      if (error) console.warn('[queue] create_visit failed', error.message);
-    });
+/** Normalize an RPC result (PostgREST may wrap a single composite row in an array). */
+function rpcRow(data: unknown): Visit | null {
+  if (!data) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row ?? null) as Visit | null;
 }
 
-function persistIntent(visitId: string, intent: TransitionIntent, status: VisitStatus): void {
+/**
+ * Persist a staff transition via set_visit_status (SECURITY DEFINER; validates
+ * from→intent server-side and raises P0409 on illegal moves, §5). Reconciles the
+ * returned authoritative row back into the store; realtime also echoes it.
+ * Param names mirror packages/db/migrations/0003 exactly (p_visit, p_intent, p_meta).
+ */
+function persistIntent(
+  visitId: string,
+  intent: TransitionIntent,
+  meta: Record<string, unknown>,
+): void {
   if (!hasBackend) return;
   void supabase
-    .rpc('set_visit_status', {
-      p_visit_id: visitId,
-      p_intent: intent,
-      p_status: status,
-    })
-    .then(({ error }) => {
-      if (error) console.warn('[queue] set_visit_status failed', error.message);
+    .rpc('set_visit_status', { p_visit: visitId, p_intent: intent, p_meta: meta })
+    .then(({ data, error }) => {
+      if (error) {
+        console.warn('[queue] set_visit_status failed', error.message);
+        return;
+      }
+      const row = rpcRow(data);
+      if (row) useQueueStore.getState().upsertVisit(row);
     });
 }
 
@@ -188,6 +193,8 @@ export const useQueueStore = create<QueueState>((set, get) => ({
 
   setVisits: (visits) => set({ visits, hydrated: true }),
 
+  reset: () => set({ visits: [], hydrated: false, undoStack: [] }),
+
   upsertVisit: (visit) =>
     set((s) => {
       const idx = s.visits.findIndex((v) => v.id === visit.id);
@@ -199,7 +206,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
 
   removeVisit: (id) => set((s) => ({ visits: s.visits.filter((v) => v.id !== id) })),
 
-  addVisit: (input) => {
+  addVisit: async (input) => {
     const state = get();
     const b = bracket(input.party_size);
     const partiesAhead = state.visits.filter((v) => isActiveStatus(v.status)).length;
@@ -242,10 +249,33 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       notes: input.notes ?? null,
     };
 
-    set((s) => ({ visits: [...s.visits, visit] }));
     void fireHaptic(effect.haptic);
-    persistCreate(visit);
-    return visit;
+
+    if (!hasBackend) {
+      set((s) => ({ visits: [...s.visits, visit] }));
+      return visit;
+    }
+
+    // Backend: the SERVER assigns the authoritative id / public_token / ticket_no
+    // / rank — and the QR link must use the server token — so await create_visit
+    // and use the returned row. On failure, fall back to the optimistic local row
+    // so the add flow still proceeds (§1.3 never block).
+    const { data, error } = await supabase.rpc('create_visit', {
+      p_venue: visit.venue_id,
+      p_party_size: visit.party_size,
+      p_display_name: visit.display_name,
+      p_quote_minutes: visit.quote_minutes,
+      p_quote_source: visit.quote_source,
+      p_type: visit.type,
+    });
+    if (error || !data) {
+      console.warn('[queue] create_visit failed', error?.message);
+      set((s) => ({ visits: [...s.visits, visit] }));
+      return visit;
+    }
+    const server = rpcRow(data) ?? visit;
+    set((s) => ({ visits: [...s.visits.filter((v) => v.id !== server.id), server] }));
+    return server;
   },
 
   applyIntent: (visitId, intent, ctx) => {
@@ -279,7 +309,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     }));
 
     void fireHaptic(effect.haptic);
-    persistIntent(visitId, intent, next.status);
+    persistIntent(visitId, intent, effect.meta);
   },
 
   undoLast: () => {
@@ -364,23 +394,34 @@ const byRankAsc = (a: Visit, b: Visit): number => a.rank - b.rank;
 const isToday = (iso: string): boolean =>
   new Date(iso).toDateString() === new Date().toDateString();
 
+// NOTE: these selectors derive NEW arrays; they MUST be wrapped in `useShallow`
+// so Zustand v5's useSyncExternalStore compares contents (stable reference when
+// unchanged) instead of looping forever ("getSnapshot should be cached").
+
 /** Active visits (waiting|notified|on_way), ordered by rank (§5.1). */
 export function useActiveVisits(): Visit[] {
-  return useQueueStore((s) => s.visits.filter((v) => isActiveStatus(v.status)).sort(byRankAsc));
+  return useQueueStore(
+    useShallow((s) => s.visits.filter((v) => isActiveStatus(v.status)).sort(byRankAsc)),
+  );
 }
 
 /** Terminal visits created today, newest first (Dziś rail). */
 export function useFinishedVisits(): Visit[] {
-  return useQueueStore((s) =>
-    s.visits
-      .filter((v) => isTerminalStatus(v.status) && isToday(v.created_at))
-      .sort((a, b) => Date.parse(b.ended_at ?? b.created_at) - Date.parse(a.ended_at ?? a.created_at)),
+  return useQueueStore(
+    useShallow((s) =>
+      s.visits
+        .filter((v) => isTerminalStatus(v.status) && isToday(v.created_at))
+        .sort(
+          (a, b) =>
+            Date.parse(b.ended_at ?? b.created_at) - Date.parse(a.ended_at ?? a.created_at),
+        ),
+    ),
   );
 }
 
 /** Every visit created today (Dziś stats). */
 export function useTodayVisits(): Visit[] {
-  return useQueueStore((s) => s.visits.filter((v) => isToday(v.created_at)));
+  return useQueueStore(useShallow((s) => s.visits.filter((v) => isToday(v.created_at))));
 }
 
 /** Live count of parties in the queue (header pill). */

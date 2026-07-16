@@ -87,6 +87,17 @@ export const pl = {
     rodoRetentionDays: 'Przechowywanie: {{days}} dni',
     plan: 'Plan i płatności',
   },
+  auth: {
+    title: 'Zaloguj się',
+    subtitle: 'Zaloguj się, aby prowadzić kolejkę.',
+    email: 'E-mail',
+    password: 'Hasło',
+    signIn: 'Zaloguj',
+    signingIn: 'Logowanie…',
+    error: 'Nie udało się zalogować. Sprawdź e-mail i hasło.',
+    signOut: 'Wyloguj',
+    demoHint: 'Demo: kelner@stoliq.app · hasło stoliq-demo-1',
+  },
 } as const;
 
 /** Widen all leaf string literals to `string` so `en.ts` mirrors the key shape

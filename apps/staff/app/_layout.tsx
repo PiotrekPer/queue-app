@@ -13,6 +13,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { AuthGate } from '@/features/auth/AuthGate';
 import { darkTheme } from '@/lib/theme';
 import { Providers } from '@/providers/Providers';
 
@@ -38,17 +39,19 @@ export default function RootLayout() {
 
   return (
     <Providers>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: darkTheme.background },
-          animation: 'fade',
-        }}
-      >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="qr/[visitId]" options={{ presentation: 'fullScreenModal' }} />
-      </Stack>
+      <AuthGate>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: darkTheme.background },
+            animation: 'fade',
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="qr/[visitId]" options={{ presentation: 'fullScreenModal' }} />
+        </Stack>
+      </AuthGate>
     </Providers>
   );
 }

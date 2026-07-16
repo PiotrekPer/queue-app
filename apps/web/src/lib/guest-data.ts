@@ -39,6 +39,16 @@ export interface GuestActionResult {
  * so the 8s poll (`router.refresh()`) always sees fresh data.
  */
 export async function fetchTicket(token: string): Promise<TicketView | null> {
+  // Local dev: read directly via a service-role client (the local edge runtime
+  // can't reach @stoliq/core). Dynamic import keeps this server-only module out
+  // of the client bundle. In production canUseDirect is false → edge function.
+  try {
+    const { canUseDirect, getTicketDirect } = await import('./ticket-direct');
+    if (canUseDirect) return await getTicketDirect(token);
+  } catch (err) {
+    console.warn('[guest] direct read unavailable, falling back', err);
+  }
+
   if (!hasBackend) return mockTicket(token);
 
   try {

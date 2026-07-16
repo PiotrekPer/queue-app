@@ -13,6 +13,7 @@ import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { isActiveStatus } from '@stoliq/core';
 import { NameStep, PartySizeGrid, autoQuoteForSize, DEMO_VENUE_ID } from '@/features/add';
+import { useAuthStore } from '@/features/auth/store';
 import { useQueueStore } from '@/features/queue/store';
 
 type Step = 'size' | 'name';
@@ -21,31 +22,40 @@ export default function AddScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>('size');
   const [partySize, setPartySize] = useState<number | null>(null);
+  const [committing, setCommitting] = useState(false);
 
   function pickSize(size: number): void {
     setPartySize(size);
     setStep('name');
   }
 
-  function commit(displayName: string | null): void {
-    if (partySize === null) return;
+  async function commit(displayName: string | null): Promise<void> {
+    if (partySize === null || committing) return;
+    setCommitting(true);
     // Parties currently ahead → shapes the humble default quote (§6).
     const partiesAhead = useQueueStore
       .getState()
       .visits.filter((v) => isActiveStatus(v.status)).length;
     const quote = autoQuoteForSize(partySize, partiesAhead);
 
-    const visit = useQueueStore.getState().addVisit({
-      venue_id: DEMO_VENUE_ID,
-      party_size: partySize,
-      display_name: displayName,
-      quote_minutes: quote,
-      quote_source: 'auto',
-      type: 'walk_in',
-    });
-
-    // Replace so „back" from the QR screen lands on Kolejka, not this modal.
-    router.replace(`/qr/${visit.id}`);
+    try {
+      // With a backend, the server assigns the authoritative id + public_token
+      // (the QR must encode the server token), so await the created row.
+      const visit = await useQueueStore.getState().addVisit({
+        // Real venue once signed in (RLS/RPC scope by it); demo id offline.
+        venue_id: useAuthStore.getState().venueId ?? DEMO_VENUE_ID,
+        party_size: partySize,
+        display_name: displayName,
+        quote_minutes: quote,
+        quote_source: 'auto',
+        type: 'walk_in',
+      });
+      // Replace so „back" from the QR screen lands on Kolejka, not this modal.
+      router.replace(`/qr/${visit.id}`);
+    } catch (err) {
+      console.warn('[add] create failed', err);
+      setCommitting(false);
+    }
   }
 
   return (

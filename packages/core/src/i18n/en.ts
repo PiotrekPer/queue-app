@@ -88,4 +88,15 @@ export const en = {
     rodoRetentionDays: 'Retention: {{days}} days',
     plan: 'Plan & billing',
   },
+  auth: {
+    title: 'Sign in',
+    subtitle: 'Sign in to run the queue.',
+    email: 'Email',
+    password: 'Password',
+    signIn: 'Sign in',
+    signingIn: 'Signing in…',
+    error: 'Could not sign in. Check your email and password.',
+    signOut: 'Sign out',
+    demoHint: 'Demo: kelner@stoliq.app · password stoliq-demo-1',
+  },
 } satisfies Translation;

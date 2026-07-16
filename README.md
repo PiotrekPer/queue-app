@@ -59,4 +59,18 @@ lives in [`CLAUDE.md` §12](./CLAUDE.md). In short: strings via i18n keys, no he
 (tokens only), DB changes = new numbered migration + regenerated types, and the state-machine /
 notification tables in `CLAUDE.md` are updated in the same PR as the code they describe.
 
+## Documentation
+
+- [`CLAUDE.md`](./CLAUDE.md) — the full product / engineering / design spec (v1, M0–M2).
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — how the code fits together: data flow,
+  auth, RLS model, design system, and the notable build decisions.
+- [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) — local (Docker) + cloud Supabase, Vercel (web),
+  EAS (staff app), SMS setup, secrets.
+- [`docs/legal/umowa-powierzenia.md`](./docs/legal/umowa-powierzenia.md) — RODO processing
+  agreement (§11).
+
+Backend + staff auth are wired: with a Supabase project configured, the staff app runs the
+queue via RPCs (server-validated state machine) and the guest ticket page reflects it live;
+without one, both surfaces run on deterministic demo data. See `docs/ARCHITECTURE.md`.
+
 _Made in PL/NL._
