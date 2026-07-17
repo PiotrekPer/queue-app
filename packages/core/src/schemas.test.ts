@@ -15,7 +15,7 @@ describe('SettingsSchema (§4.1 defaults)', () => {
     expect(s.retention_days).toBe(60);
     expect(s.quote_defaults).toEqual({ '1-2': 15, '3-4': 25, '5+': 40 });
     expect(s.quote_mode).toBe('auto');
-    expect(s.channels).toEqual({ sms: true, email: false });
+    expect(s.channels).toEqual({ sms: true, email: false, push: true });
     expect(s.open_hours).toBeNull();
   });
 

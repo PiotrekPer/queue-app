@@ -20,6 +20,7 @@ import {
   InvalidTransitionError,
   isTerminalStatus,
   LIMITS,
+  PushSubscribeInputSchema,
   type GuestAction,
   type TransitionIntent,
 } from '@stoliq/core';
@@ -59,10 +60,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json(errorBody('invalid_json'), 400);
   }
 
-  // Discriminate: a body with `action` is a transition; otherwise it is a
-  // set-contact submission (phone/email + consent).
-  const isAction =
-    typeof raw === 'object' && raw !== null && 'action' in (raw as Record<string, unknown>);
+  // Discriminate the three body shapes on this route:
+  //   `action`       → a state-machine transition
+  //   `subscription` → a free web-push opt-in (docs/specs/push-notifications.md)
+  //   otherwise      → a set-contact submission (phone/email + consent)
+  const asObj =
+    typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : null;
+  const isAction = asObj !== null && 'action' in asObj;
+  const isPush = asObj !== null && 'subscription' in asObj;
 
   const token =
     typeof raw === 'object' && raw !== null
@@ -79,7 +84,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   try {
     const db = adminClient();
-    return isAction ? await handleAction(db, raw) : await handleContact(db, raw);
+    if (isAction) return await handleAction(db, raw);
+    if (isPush) return await handlePushSubscribe(db, raw);
+    return await handleContact(db, raw);
   } catch (err) {
     if (err instanceof InvalidTransitionError) {
       return json(errorBody(err.code, err.message), err.httpStatus);
@@ -204,6 +211,46 @@ async function handleContact(db: SupabaseClient, raw: unknown): Promise<Response
     const { error } = await db.from('visits').update({ guest_id: guestId }).eq('id', visit.id);
     if (error) throw error;
   }
+
+  return await respondWithView(db, visit.id);
+}
+
+// ── push-subscribe path ─────────────────────────────────────────────────────────
+
+/**
+ * Store a guest's free web-push subscription against their visit (§7.1 push).
+ * No PII, no plan gate, no consent basis needed — it's a transient device token
+ * that dies with the visit. Idempotent on (visit_id, endpoint): re-subscribing
+ * from the same device refreshes the keys instead of duplicating.
+ */
+async function handlePushSubscribe(db: SupabaseClient, raw: unknown): Promise<Response> {
+  const parsed = PushSubscribeInputSchema.safeParse(raw);
+  if (!parsed.success) {
+    return json(errorBody('invalid_input', parsed.error.message), 400);
+  }
+  const { token, subscription } = parsed.data;
+
+  const visit = await loadVisitByToken(db, token);
+  if (!visit) return json(errorBody('not_found'), 404);
+
+  // A visit that has ended has nothing left to notify — don't store a target.
+  if (isTerminalStatus(visit.status)) {
+    return json(errorBody('invalid_transition', 'visit has ended'), 409);
+  }
+
+  const { error } = await db
+    .from('guest_push_targets')
+    .upsert(
+      {
+        visit_id: visit.id,
+        kind: 'webpush',
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+        revoked_at: null,
+      },
+      { onConflict: 'visit_id,endpoint' },
+    );
+  if (error) throw error;
 
   return await respondWithView(db, visit.id);
 }

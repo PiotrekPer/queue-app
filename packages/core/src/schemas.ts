@@ -45,8 +45,12 @@ export const SettingsSchema = z
     quote_defaults: QuoteDefaultsSchema.default({ '1-2': 15, '3-4': 25, '5+': 40 }),
     quote_mode: z.enum(['auto', 'manual']).default('auto'),
     channels: z
-      .object({ sms: z.boolean().default(true), email: z.boolean().default(false) })
-      .default({ sms: true, email: false }),
+      .object({
+        sms: z.boolean().default(true),
+        email: z.boolean().default(false),
+        push: z.boolean().default(true),
+      })
+      .default({ sms: true, email: false, push: true }),
     open_hours: z.unknown().nullable().default(null),
   })
   .default({});
@@ -205,6 +209,20 @@ export const GuestContactInputSchema = z.object({
 });
 export type GuestContactInput = z.infer<typeof GuestContactInputSchema>;
 
+/** A W3C PushSubscription reduced to what the sender needs (docs/specs/push-notifications.md). */
+export const PushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
+});
+export type PushSubscription = z.infer<typeof PushSubscriptionSchema>;
+
+/** Guest opts into free web-push on the ticket page — stored per visit (§7.1 push). */
+export const PushSubscribeInputSchema = z.object({
+  token: z.string(),
+  subscription: PushSubscriptionSchema,
+});
+export type PushSubscribeInput = z.infer<typeof PushSubscribeInputSchema>;
+
 /** Public shape returned by the `get-ticket` edge function (no PII beyond name). */
 export const TicketViewSchema = z.object({
   venue_name: z.string(),
@@ -219,6 +237,10 @@ export const TicketViewSchema = z.object({
   hold_expires_at: NullableTs,
   has_phone: z.boolean(),
   can_add_phone: z.boolean(), // venue paid + sms channel on
+  // Free wallet pass is offerable: push channel on + the server has signing
+  // credentials (docs/specs/push-notifications.md). Defaulted so existing
+  // producers (mock/direct reads) stay valid.
+  can_add_wallet: z.boolean().default(false),
   marketing_enabled: z.boolean(),
   retention_days: z.number().int(),
   locale: z.enum(LOCALES),

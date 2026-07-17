@@ -132,6 +132,22 @@ export function canAddPhone(venue: VenueRow): boolean {
 }
 
 /**
+ * Free wallet pass is offerable when the push channel is on AND the server can
+ * actually sign a pass (docs/specs/push-notifications.md). No plan gate — push
+ * is free on every tier. Never advertise a button that would 501.
+ */
+export function canAddWallet(venue: VenueRow): boolean {
+  const pushOn = venue.settings.channels?.push !== false;
+  const appleReady = Boolean(
+    Deno.env.get('APPLE_PASS_TYPE_ID') && Deno.env.get('APPLE_PASS_CERT_P12'),
+  );
+  const googleReady = Boolean(
+    Deno.env.get('GOOGLE_WALLET_ISSUER_ID') && Deno.env.get('GOOGLE_WALLET_SA_PRIVATE_KEY'),
+  );
+  return pushOn && (appleReady || googleReady);
+}
+
+/**
  * Assemble + validate the public TicketView (§8). `guest` may be null (no phone
  * yet). Validation with `TicketViewSchema` guarantees we never accidentally add
  * a PII field to this boundary.
@@ -156,6 +172,7 @@ export function buildTicketView(
     hold_expires_at: visit.hold_expires_at,
     has_phone: hasPhone,
     can_add_phone: canAddPhone(venue) && !hasPhone,
+    can_add_wallet: canAddWallet(venue),
     marketing_enabled: venue.settings.marketing_enabled === true,
     retention_days: venue.settings.retention_days ?? 60,
     locale: venue.locale,

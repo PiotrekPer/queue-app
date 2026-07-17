@@ -19,6 +19,12 @@ const copy = {
     cancelConfirmCta: 'Tak, rezygnujemy',
     notFoundHint: 'Zeskanuj kod ponownie przy wejściu.',
     liveRefresh: 'Odświeża się automatycznie',
+    walletTitle: 'Miej numerek pod ręką',
+    walletHint: 'Damy znać na ekranie blokady, gdy stolik będzie gotowy.',
+    walletApple: 'Dodaj do Apple Wallet',
+    walletGoogle: 'Dodaj do Google Wallet',
+    walletAdding: 'Dodaję…',
+    walletError: 'Nie udało się dodać numerka. Spróbuj ponownie.',
   },
   en: {
     onWayAddressHint: 'See you here.',
@@ -33,6 +39,12 @@ const copy = {
     cancelConfirmCta: 'Yes, cancel',
     notFoundHint: 'Scan the code again at the entrance.',
     liveRefresh: 'Refreshes automatically',
+    walletTitle: 'Keep your ticket handy',
+    walletHint: "We'll ping your lock screen when your table is ready.",
+    walletApple: 'Add to Apple Wallet',
+    walletGoogle: 'Add to Google Wallet',
+    walletAdding: 'Adding…',
+    walletError: "Couldn't add the ticket. Please try again.",
   },
 } as const;
 

@@ -132,6 +132,7 @@ const MOCK_BASE = {
   quote_minutes: 25,
   has_phone: false,
   can_add_phone: true,
+  can_add_wallet: true, // demo: exercise the Add-to-Wallet path without certs
   marketing_enabled: true,
   retention_days: 60,
   locale: 'pl',

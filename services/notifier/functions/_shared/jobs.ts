@@ -19,6 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { ticketLink } from './links.ts';
 import { sendSms } from './smsapi.ts';
 import { sendEmail } from './resend.ts';
+import { deliverPushForVisit } from './push.ts';
 import { formatWarsawTimeSafe } from './time.ts';
 
 /** Retry backoff schedule in milliseconds, indexed by attempt count (§7.4). */
@@ -221,8 +222,70 @@ export async function processLockedJob(
   const paid = venue.plan === 'pro' || venue.plan === 'suite';
   const smsChannelOn = venue.settings.channels?.sms !== false;
   const emailChannelOn = venue.settings.channels?.email === true;
+  const pushChannelOn = venue.settings.channels?.push !== false;
 
   const channel = job.channel;
+
+  // ── push (free, all tiers) — docs/specs/push-notifications.md ──────────────
+  // No plan gate, no wallet debit. Fans out to the visit's stored web-push
+  // targets; "no targets" is a silent success (guest never opted in → page-only).
+  if (channel === 'push') {
+    if (!pushChannelOn) {
+      await db.from('notification_jobs').update({ done_at: new Date().toISOString() }).eq('id', job.id);
+      return { jobId: job.id, outcome: 'skipped_gate', detail: 'push disabled' };
+    }
+
+    const body = await resolveTemplateBody(db, venue.id, job.template_key, venue.locale);
+    const rendered = renderTemplate(body, {
+      name: guest?.first_name ?? '',
+      venue: venue.name,
+      ticket_no: visit.ticket_no,
+      hold: venue.settings.hold_minutes ?? 7,
+      link: ticketLink(visit.public_token),
+      time: formatWarsawTimeSafe(visit.notified_at),
+    });
+
+    const push = await deliverPushForVisit(db, {
+      visitId: visit.id,
+      venueName: venue.name,
+      locale: venue.locale,
+      rendered,
+      ticketUrl: ticketLink(visit.public_token),
+    });
+
+    // Nothing to send (no opt-in on any transport) → no notifications row.
+    if (push.sent === 0 && push.error === null) {
+      await db.from('notification_jobs').update({ done_at: new Date().toISOString() }).eq('id', job.id);
+      return { jobId: job.id, outcome: 'skipped_gate', detail: 'no push targets' };
+    }
+
+    await db.from('notifications').insert({
+      visit_id: visit.id,
+      venue_id: venue.id,
+      channel: 'push',
+      template_key: job.template_key,
+      to_addr: push.detail,
+      body: rendered,
+      segments: null,
+      cost_grosz: 0, // free channel — never debits the wallet
+      status: push.ok ? 'sent' : 'failed',
+      provider_id: null,
+      sent_at: push.ok ? new Date().toISOString() : null,
+      error: push.error,
+    });
+
+    const state = await finishJob(db, job, push.ok);
+    if (state === 'failed') {
+      console.error('[send-notification] push failed permanently', {
+        jobId: job.id,
+        visitId: visit.id,
+        error: push.error,
+      });
+      return { jobId: job.id, outcome: 'failed', detail: push.error ?? 'unknown' };
+    }
+    return { jobId: job.id, outcome: push.ok ? 'sent' : 'retry', detail: push.error ?? undefined };
+  }
+
   let toAddr: string | null = null;
 
   if (channel === 'sms') {

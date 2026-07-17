@@ -76,7 +76,10 @@ export const VISIT_EVENTS = [
 export type VisitEvent = (typeof VISIT_EVENTS)[number];
 
 // ─── Notification channels / templates / statuses (§4, §7) ──────────────────
-export const CHANNELS = ['sms', 'email'] as const;
+// `push` = free best-effort web-push / wallet-pass channel (docs/specs/
+// push-notifications.md): no plan gate, no wallet debit. `sms` stays the paid,
+// guaranteed-reach upgrade.
+export const CHANNELS = ['sms', 'email', 'push'] as const;
 export type Channel = (typeof CHANNELS)[number];
 
 export const TEMPLATE_KEYS = ['joined', 'heads_up', 'table_ready', 'renotify'] as const;
@@ -133,6 +136,6 @@ export const DEFAULT_SETTINGS = {
   retention_days: 60,
   quote_defaults: { '1-2': 15, '3-4': 25, '5+': 40 },
   quote_mode: 'auto',
-  channels: { sms: true, email: false },
+  channels: { sms: true, email: false, push: true },
   open_hours: null,
 } as const;

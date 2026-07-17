@@ -6,6 +6,7 @@ import { LiveDot } from './LiveDot';
 import { Stamp } from './Stamp';
 import { GuestActions } from './GuestActions';
 import { PhoneOptIn } from './PhoneOptIn';
+import { AddToWallet } from './AddToWallet';
 
 /**
  * The numerek (§9.4). Paper ticket card with a perforated top edge, rendered
@@ -76,6 +77,9 @@ function Body({
           <Position ticket={ticket} locale={locale} />
           <WaitLine ticket={ticket} locale={locale} />
           <LiveDot locale={locale} />
+          {ticket.can_add_wallet ? (
+            <AddToWallet token={token} locale={locale} />
+          ) : null}
           {showOptIn ? (
             <PhoneOptIn
               token={token}

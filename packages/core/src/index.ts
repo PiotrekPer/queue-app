@@ -10,5 +10,6 @@ export * from './wait-time';
 export * from './sms-segments';
 export * from './rank';
 export * from './templates';
+export * from './wallet-pass';
 export { resources, supportedLngs, fallbackLng, defaultNS } from './i18n/index';
 export type { Translation } from './i18n/index';
