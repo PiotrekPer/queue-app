@@ -1,6 +1,6 @@
 # Spec: Free "table ready" push (Web Push + Wallet passes)
 
-Status: **scaffolded — blocked on credentials** (see §9 for what's built and §6
+Status: **scaffolded — blocked on credentials** (see §11 for what's built and §6
 for what must be provisioned). Decisions in §7 are settled.
 Owner: TBD · Relates to CLAUDE.md §7 (notification choreography), §4 (data model),
 §1 (guest contract), §13 (milestones).
@@ -126,7 +126,35 @@ main path: on iOS the Push API requires a **Home-Screen-installed PWA**, and ask
 a walk-in guest to "install" breaks the §1 contract outright. A wallet pass is not
 an app — one tap, no install — which is why it, not web push, is the iOS answer.
 
-## 9. Running it (dev tooling)
+## 9. Google Wallet: silent updates vs notifications (verified)
+
+**A `PATCH` never rings the phone.** It updates the pass content silently and has
+no rate limit. Ringing requires a separate `POST .../genericObject/{id}/addMessage`
+with `messageType: TEXT_AND_NOTIFY`.
+
+**Google allows max 3 notifying messages per pass per 24h** (`QuotaExceeded`
+beyond that) — *exactly* CLAUDE.md §1's "max 3 messages per visit". The platform
+limit and the guest contract are the same number, so the policy is forced:
+
+| Event | Mechanism | Rings? | Counts to 3/24h |
+|---|---|---|---|
+| Position changes (5→4→3) | `PATCH` | No | **No — do it freely** |
+| `heads_up` (§7.2) | `addMessage` | Yes | 1 |
+| `table_ready` — STOLIK GOTOWY | `addMessage` | Yes | 2 |
+| `renotify` (max once, §5 #7) | `addMessage` | Yes | 3 |
+| Seated / terminal | `PATCH` | No | No |
+
+So the pass stays continuously accurate for free, and an interruption is spent
+only on the moments that earn one — the same three templates §7.2 already
+defines. A wallet notify should therefore be enqueued by the SAME job that sends
+the SMS, not on every queue recompute.
+
+Verified live against the API on a real device; `pnpm wallet:update <serial>
+notified --notify` demonstrates both halves.
+
+Sources: [Trigger Push Notifications — Generic pass](https://developers.google.com/wallet/generic/use-cases/trigger-push-notifications)
+
+## 10. Running it (dev tooling)
 
 Google Wallet works end-to-end **today, without Supabase or hosting** — a save URL
 is a self-contained signed JWT, and the update is a direct Wallet API call:
@@ -152,7 +180,7 @@ Gotchas we already hit:
 - `wallet:save-url` mints a **fresh serial each run** — use `wallet:list` to find
   the id of a pass you actually saved.
 
-## 10. Implementation status
+## 11. Implementation status
 
 **Built and verified (typecheck + lint + 142 tests green):**
 - `packages/core` — `push` added to `CHANNELS`, `settings.channels.push` (default
@@ -182,7 +210,7 @@ Until credentials land, every entry point degrades to `not_configured`/`501`,
 `can_add_wallet` is false, and the guest page simply doesn't show the button —
 the live page keeps working (§1: never block).
 
-## 11. Definition of done (per CLAUDE.md §12)
+## 12. Definition of done (per CLAUDE.md §12)
 
 - [x] `pnpm typecheck && lint && test` green.
 - [ ] Push gating unit-tested in `packages/core` (cost 0, no debit, no plan gate)

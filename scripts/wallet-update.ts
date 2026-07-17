@@ -1,12 +1,22 @@
 /**
  * Dev tool: PATCH a saved Google Wallet numerek to a new state.
  *
- *   pnpm wallet:update <serial> [status]      # status: waiting|notified|on_way|seated
- *   pnpm wallet:update demo-1784292495254 notified
+ *   pnpm wallet:update <serial> [status] [--notify]
+ *   pnpm wallet:update demo-1784292495254 notified --notify
  *
  * Proves the UPDATE half of the wallet path (the save URL proved the ADD half)
  * without Supabase or the notifier: mint an OAuth2 token from the service
  * account, PATCH the object, and Google pushes it to every device that saved it.
+ *
+ * ── PATCH vs notify (the important bit) ──────────────────────────────────────
+ * A PATCH updates the pass CONTENT SILENTLY — it never rings the phone, and has
+ * no rate limit. To actually buzz the guest you must POST `addMessage` with
+ * messageType TEXT_AND_NOTIFY (the `--notify` flag here).
+ *
+ * Google allows **max 3 notifying messages per pass per 24h** (QuotaExceeded
+ * beyond that) — which is exactly CLAUDE.md §1's "max 3 messages per visit".
+ * So: PATCH freely on every position change (silent, free); spend a notify only
+ * on heads_up / table_ready / renotify (§7.2).
  *
  * The pass body comes from @stoliq/core (`buildGooglePassObject`) — the same
  * builder the guest page and notifier use, so this can't drift.
@@ -17,7 +27,12 @@
  * and the browser).
  */
 import { createSign } from 'node:crypto';
-import { buildGooglePassObject, type PassModel, type VisitStatus } from '@stoliq/core';
+import {
+  buildGooglePassObject,
+  presentPass,
+  type PassModel,
+  type VisitStatus,
+} from '@stoliq/core';
 
 const TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const WALLET_API = 'https://walletobjects.googleapis.com/walletobjects/v1';
@@ -83,10 +98,14 @@ async function main(): Promise<void> {
   const pem = normalizePem(requireEnv('GOOGLE_WALLET_SA_PRIVATE_KEY'));
   const classSuffix = process.env.GOOGLE_WALLET_CLASS_SUFFIX?.trim() || 'numerek';
 
-  const serial = process.argv[2];
-  const status = (process.argv[3] as VisitStatus) ?? 'notified';
+  const args = process.argv.slice(2).filter((a) => a !== '--notify');
+  const notify = process.argv.includes('--notify');
+  const serial = args[0];
+  const status = (args[1] as VisitStatus) ?? 'notified';
   if (!serial) {
-    console.error('\nUsage: pnpm wallet:update <serial> [waiting|notified|on_way|seated]\n');
+    console.error(
+      '\nUsage: pnpm wallet:update <serial> [waiting|notified|on_way|seated] [--notify]\n',
+    );
     process.exit(1);
   }
 
@@ -120,8 +139,42 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log(`\n✓ Updated ${objectId} → ${status}`);
-  console.log('  Check the pass on your phone — it should show the new state.\n');
+  console.log(`\n✓ Updated ${objectId} → ${status}  (silent — content only)`);
+
+  if (!notify) {
+    console.log('  The pass changed but the phone did NOT ring. Add --notify to buzz it.\n');
+    return;
+  }
+
+  // Spend one of the 3/24h notifying messages (§7.2 — only for the moments
+  // that earn an interruption).
+  const p = presentPass(model);
+  const msgRes = await fetch(
+    `${WALLET_API}/genericObject/${encodeURIComponent(objectId)}/addMessage`,
+    {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          // Unique id keeps repeat runs from stacking duplicate messages.
+          id: `${status}-${Date.now()}`,
+          header: model.venueName,
+          body: p.headline === 'STOLIK GOTOWY' ? `${p.headline} — ${p.detail}` : p.detail,
+          messageType: 'TEXT_AND_NOTIFY',
+        },
+      }),
+    },
+  );
+
+  const msgBody = await msgRes.text();
+  if (!msgRes.ok) {
+    // 429/quota here means we blew the 3-per-24h budget for this pass.
+    console.error(`\n✗ addMessage failed (${msgRes.status})\n${msgBody.slice(0, 300)}\n`);
+    process.exit(1);
+  }
+
+  console.log('✓ Sent a TEXT_AND_NOTIFY message — the phone should ring now.');
+  console.log('  (counts against Google\'s 3-notifications-per-pass-per-24h limit)\n');
 }
 
 void main();

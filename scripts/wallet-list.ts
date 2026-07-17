@@ -73,14 +73,29 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  type Localized = { defaultValue?: { value?: string } };
   const parsed = JSON.parse(body) as {
-    resources?: Array<{ id: string; state?: string; header?: unknown }>;
+    resources?: Array<{
+      id: string;
+      state?: string;
+      header?: Localized;
+      subheader?: Localized;
+      hexBackgroundColor?: string;
+    }>;
   };
   const rows = parsed.resources ?? [];
-  console.log(`\nObjects in class ${classId}: ${rows.length}`);
+
+  console.log(`\nObjects in class ${classId}: ${rows.length}\n`);
   for (const r of rows) {
-    const header = JSON.stringify(r.header ?? '');
-    console.log(`  ${r.id}   state=${r.state ?? '?'}  header=${header.slice(0, 60)}`);
+    const serial = r.id.split('.').slice(1).join('.');
+    const header = r.header?.defaultValue?.value ?? '?';
+    const sub = r.subheader?.defaultValue?.value ?? '';
+    // #1F9D5B is token color.ready-fill — the pass only wears it when a table
+    // is ready (§9.2), so the colour alone tells you the state.
+    const ready = r.hexBackgroundColor?.toUpperCase() === '#1F9D5B';
+    console.log(`  ${serial}`);
+    console.log(`    shows:  "${header}" ${sub ? `/ "${sub}"` : ''}`);
+    console.log(`    state:  ${r.state ?? '?'}  bg=${r.hexBackgroundColor ?? '?'}${ready ? '  ← STOLIK GOTOWY' : ''}\n`);
   }
   console.log(
     rows.length
