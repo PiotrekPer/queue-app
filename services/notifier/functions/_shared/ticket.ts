@@ -45,7 +45,7 @@ export interface VenueRow {
   locale: Locale;
   settings: {
     retention_days?: number;
-    channels?: { sms?: boolean; email?: boolean };
+    channels?: { sms?: boolean; email?: boolean; push?: boolean };
     marketing_enabled?: boolean;
     hold_minutes?: number;
     [k: string]: unknown;

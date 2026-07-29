@@ -3,6 +3,7 @@ import {
   GUEST_ACTIONS,
   GuestActionInputSchema,
   GuestContactInputSchema,
+  PushSubscribeInputSchema,
   type GuestAction,
 } from '@stoliq/core';
 import { env, hasBackend } from '@/lib/env';
@@ -26,6 +27,10 @@ type ContactPayload = {
   phone_e164?: string;
   marketing_consent?: boolean;
 };
+type PushPayload = {
+  kind: 'push';
+  subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+};
 
 export async function POST(
   req: Request,
@@ -47,6 +52,9 @@ export async function POST(
   }
   if (kind === 'contact') {
     return handleContact(token, raw as ContactPayload);
+  }
+  if (kind === 'push') {
+    return handlePush(token, raw as PushPayload);
   }
   return NextResponse.json({ ok: false, code: 'bad_request' }, { status: 400 });
 }
@@ -94,6 +102,25 @@ async function handleContact(token: string, body: ContactPayload) {
     intent: 'set_contact',
     ...parsed.data,
   });
+}
+
+// ─── push-subscribe → guest-action edge fn ────────────────────────────────────
+
+async function handlePush(token: string, body: PushPayload) {
+  const parsed = PushSubscribeInputSchema.safeParse({
+    token,
+    subscription: body.subscription,
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, code: 'invalid_subscription' }, { status: 400 });
+  }
+
+  if (!hasBackend) {
+    return NextResponse.json({ ok: true, simulated: true });
+  }
+
+  // guest-action distinguishes push by the `subscription` field in the body.
+  return proxy(`${env.functionsUrl}/guest-action`, parsed.data);
 }
 
 // ─── shared proxy (server-side; anon key, never service_role) ─────────────────

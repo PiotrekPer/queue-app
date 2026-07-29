@@ -142,7 +142,9 @@ async function changedSerials(deviceId: string): Promise<Response> {
     .is('revoked_at', null);
   if (error) throw error;
 
-  const rows = (data ?? []) as Array<{ visits: { public_token: string } | null }>;
+  // supabase types a to-one join as an array; at runtime it is an object. Cast
+  // through unknown so the object access below stays correct.
+  const rows = (data ?? []) as unknown as Array<{ visits: { public_token: string } | null }>;
   const serialNumbers = rows
     .map((r) => r.visits?.public_token)
     .filter((s): s is string => Boolean(s));

@@ -12,6 +12,7 @@ import {
   analyze,
   defaultTemplate,
   renderTemplate,
+  type Channel,
   type Locale,
   type TemplateKey,
 } from '@stoliq/core';
@@ -33,7 +34,7 @@ export interface JobRow {
   id: string;
   visit_id: string;
   template_key: TemplateKey;
-  channel: 'sms' | 'email';
+  channel: Channel;
   run_after: string;
   attempts: number;
   locked_at: string | null;
@@ -62,7 +63,7 @@ interface VenueForSend {
   plan: string;
   locale: Locale;
   sms_balance_grosz: number;
-  settings: { hold_minutes?: number; channels?: { sms?: boolean; email?: boolean } };
+  settings: { hold_minutes?: number; channels?: { sms?: boolean; email?: boolean; push?: boolean } };
 }
 
 interface GuestForSend {
@@ -251,6 +252,7 @@ export async function processLockedJob(
       locale: venue.locale,
       rendered,
       ticketUrl: ticketLink(visit.public_token),
+      templateKey: job.template_key,
     });
 
     // Nothing to send (no opt-in on any transport) → no notifications row.

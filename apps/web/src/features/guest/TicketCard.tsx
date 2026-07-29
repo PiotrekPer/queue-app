@@ -7,6 +7,7 @@ import { Stamp } from './Stamp';
 import { GuestActions } from './GuestActions';
 import { PhoneOptIn } from './PhoneOptIn';
 import { AddToWallet } from './AddToWallet';
+import { WebPushOptIn } from './WebPushOptIn';
 
 /**
  * The numerek (§9.4). Paper ticket card with a perforated top edge, rendered
@@ -80,6 +81,7 @@ function Body({
           {ticket.can_add_wallet ? (
             <AddToWallet token={token} locale={locale} />
           ) : null}
+          <WebPushOptIn token={token} locale={locale} />
           {showOptIn ? (
             <PhoneOptIn
               token={token}

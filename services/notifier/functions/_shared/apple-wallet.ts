@@ -111,7 +111,7 @@ export function buildPassJson(model: PassModel, webServiceUrl: string): Record<s
 export function buildSignedPkpass(
   _model: PassModel,
   _webServiceUrl: string,
-): Promise<Uint8Array | null> {
+): Promise<Uint8Array<ArrayBuffer> | null> {
   if (!appleWalletConfigured()) return Promise.resolve(null);
   // TODO(wallet): zip(pass.json, manifest.json(sha1 per file), signature(PKCS#7
   // detached, signed with APPLE_PASS_CERT_P12), icon.png/logo.png @1x/@2x).

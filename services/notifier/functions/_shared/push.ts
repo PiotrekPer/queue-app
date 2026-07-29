@@ -12,7 +12,7 @@
  * opted in, and the live page is still the source of truth (§1: never block).
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Locale, VisitStatus } from '@stoliq/core';
+import type { Locale, TemplateKey, VisitStatus } from '@stoliq/core';
 import { sendPushForVisit } from './webpush.ts';
 import { sendApplePassUpdate } from './apple-wallet.ts';
 import { sendGooglePassUpdate } from './google-wallet.ts';
@@ -27,7 +27,13 @@ export interface DeliverPushInput {
   rendered: string;
   /** Live ticket URL — the notification's tap target and the pass's barcode. */
   ticketUrl: string;
+  /** Which template fired — decides whether the wallet pass rings (§7.2). */
+  templateKey: TemplateKey;
 }
+
+/** Templates that earn a phone-ringing wallet notification (§7.2); every other
+ *  push updates the pass content silently (Google PATCH, unlimited/free). */
+const GOOGLE_NOTIFY_TEMPLATES = new Set<TemplateKey>(['heads_up', 'table_ready', 'renotify']);
 
 export interface DeliverPushResult {
   ok: boolean;
@@ -87,7 +93,9 @@ export async function deliverPushForVisit(
       url: input.ticketUrl,
     }),
     sendApplePassUpdate(db, visit.id),
-    sendGooglePassUpdate(db, visit.id, model),
+    sendGooglePassUpdate(db, visit.id, model, {
+      notify: GOOGLE_NOTIFY_TEMPLATES.has(input.templateKey),
+    }),
   ]);
 
   const sent = web.sent + apple.sent + google.sent;

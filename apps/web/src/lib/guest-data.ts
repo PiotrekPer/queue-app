@@ -23,6 +23,10 @@ export type GuestContactBody = {
   phone_e164: string;
   marketing_consent: boolean;
 };
+export type GuestPushBody = {
+  kind: 'push';
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } };
+};
 
 export interface GuestActionResult {
   ok: boolean;
@@ -71,7 +75,7 @@ export async function fetchTicket(token: string): Promise<TicketView | null> {
 
 async function postToActionRoute(
   token: string,
-  body: GuestActionBody | GuestContactBody,
+  body: GuestActionBody | GuestContactBody | GuestPushBody,
 ): Promise<GuestActionResult> {
   try {
     const res = await fetch(`/a/${encodeURIComponent(token)}`, {
@@ -112,6 +116,14 @@ export function submitContact(
     phone_e164: contact.phone_e164,
     marketing_consent: contact.marketing_consent,
   });
+}
+
+/** Guest opts into free web-push (§7.1 push) — stores a device target (§8). */
+export function submitPushSubscription(
+  token: string,
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+): Promise<GuestActionResult> {
+  return postToActionRoute(token, { kind: 'push', subscription });
 }
 
 // ─── deterministic dev/CI mock ────────────────────────────────────────────────

@@ -28,7 +28,6 @@ import {
   buildSaveJwt,
   googleWalletConfigured,
   passObjectId,
-  SAVE_URL_BASE,
 } from '../_shared/google-wallet.ts';
 import type { PassModel } from '@stoliq/core';
 
@@ -128,11 +127,18 @@ async function issueGoogle(
     return json(errorBody('not_configured', 'google wallet credentials missing'), 501);
   }
 
-  const jwt = await buildSaveJwt(model);
-  if (!jwt) {
+  // buildSaveJwt returns the complete pay.google.com/gp/v/save/<jwt> URL (same
+  // contract as the web twin google-pass.ts) — hand it back as-is.
+  const saveUrl = await buildSaveJwt(model);
+  if (!saveUrl) {
     return json(errorBody('not_implemented', 'save jwt signing pending key'), 501);
   }
 
+  // Idempotent on (visit_id, wallet_serial): re-tapping "Dodaj do Google Wallet"
+  // re-activates the same target rather than duplicating. Arbiter = the NON-partial
+  // unique index from migration 0009 (a partial index can't serve as a PostgREST
+  // onConflict arbiter). webpush rows keep wallet_serial null and, NULLs being
+  // distinct, never collide here.
   const { error } = await db.from('guest_push_targets').upsert(
     {
       visit_id: visitId,
@@ -140,9 +146,9 @@ async function issueGoogle(
       wallet_serial: passObjectId(model.serial),
       revoked_at: null,
     },
-    { onConflict: 'visit_id,endpoint' },
+    { onConflict: 'visit_id,wallet_serial' },
   );
   if (error) throw error;
 
-  return json({ saveUrl: `${SAVE_URL_BASE}${jwt}` }, 200);
+  return json({ saveUrl }, 200);
 }

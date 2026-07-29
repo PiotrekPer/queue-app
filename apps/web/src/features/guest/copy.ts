@@ -25,6 +25,12 @@ const copy = {
     walletGoogle: 'Dodaj do Google Wallet',
     walletAdding: 'Dodaję…',
     walletError: 'Nie udało się dodać numerka. Spróbuj ponownie.',
+    pushTitle: 'Powiadomienie na telefon',
+    pushHint: 'Damy znać na ekranie blokady, gdy stolik będzie gotowy — bez SMS.',
+    pushCta: 'Włącz powiadomienia',
+    pushAdding: 'Włączam…',
+    pushEnabled: 'Powiadomienia włączone. Damy znać, gdy stolik będzie gotowy.',
+    pushError: 'Nie udało się włączyć powiadomień. Spróbuj ponownie.',
   },
   en: {
     onWayAddressHint: 'See you here.',
@@ -45,6 +51,12 @@ const copy = {
     walletGoogle: 'Add to Google Wallet',
     walletAdding: 'Adding…',
     walletError: "Couldn't add the ticket. Please try again.",
+    pushTitle: 'Notify me on my phone',
+    pushHint: "We'll ping your lock screen when your table is ready — no SMS.",
+    pushCta: 'Turn on notifications',
+    pushAdding: 'Turning on…',
+    pushEnabled: "Notifications on. We'll let you know when your table is ready.",
+    pushError: "Couldn't turn on notifications. Please try again.",
   },
 } as const;
 
