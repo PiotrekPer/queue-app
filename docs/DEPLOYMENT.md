@@ -25,8 +25,11 @@ migrations live in `packages/db/migrations` and functions in `services/notifier`
    incl. `0004_cron` — enable the `pg_cron` + `pg_net` extensions in the dashboard
    first, and set the Vault secrets `edge_base_url` + `edge_service_key`, see
    `0004_cron.sql`).
-3. `supabase functions deploy get-ticket guest-action send-notification sweep-timers purge-guests`
-   (from `services/notifier`).
+3. `supabase functions deploy get-ticket guest-action send-notification sweep-timers purge-guests issue-pass pass-webservice`
+   (from `services/notifier`). The wallet/push functions (`issue-pass`,
+   `pass-webservice`) also need their secrets — `supabase secrets set` the
+   `GOOGLE_WALLET_*`, `APPLE_*` (incl. `APPLE_WWDR_CERT`) and `VAPID_*` values
+   from `.env.example`.
 4. Seed a demo venue if desired (`pnpm --filter @stoliq/db seed` with the project's
    URL + service_role key), or onboard a real venue.
 5. `supabase gen types typescript --linked > packages/db/src/generated/types.ts`.

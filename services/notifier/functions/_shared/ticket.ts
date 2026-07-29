@@ -138,11 +138,21 @@ export function canAddPhone(venue: VenueRow): boolean {
  */
 export function canAddWallet(venue: VenueRow): boolean {
   const pushOn = venue.settings.channels?.push !== false;
+  // Mirror appleWalletConfigured() / googleWalletConfigured() exactly (kept inline
+  // so read paths don't bundle the heavy signing modules): never advertise a
+  // button whose issue endpoint would 501 for lack of a credential.
   const appleReady = Boolean(
-    Deno.env.get('APPLE_PASS_TYPE_ID') && Deno.env.get('APPLE_PASS_CERT_P12'),
+    Deno.env.get('APPLE_PASS_TYPE_ID') &&
+      Deno.env.get('APPLE_TEAM_ID') &&
+      Deno.env.get('APPLE_PASS_CERT_P12') &&
+      Deno.env.get('APPLE_WWDR_CERT') &&
+      Deno.env.get('APPLE_APNS_KEY_P8') &&
+      Deno.env.get('APPLE_APNS_KEY_ID'),
   );
   const googleReady = Boolean(
-    Deno.env.get('GOOGLE_WALLET_ISSUER_ID') && Deno.env.get('GOOGLE_WALLET_SA_PRIVATE_KEY'),
+    Deno.env.get('GOOGLE_WALLET_ISSUER_ID') &&
+      Deno.env.get('GOOGLE_WALLET_SA_EMAIL') &&
+      Deno.env.get('GOOGLE_WALLET_SA_PRIVATE_KEY'),
   );
   return pushOn && (appleReady || googleReady);
 }

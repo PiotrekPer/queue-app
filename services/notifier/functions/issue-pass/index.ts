@@ -108,7 +108,8 @@ async function issueApple(model: PassModel): Promise<Response> {
     status: 200,
     headers: {
       'content-type': 'application/vnd.apple.pkpass',
-      'content-disposition': `attachment; filename="numerek-${model.ticketNo}.pkpass"`,
+      // inline so a direct hit (bypassing the web proxy) still hands off to PassKit.
+      'content-disposition': `inline; filename="numerek-${model.ticketNo}.pkpass"`,
       'cache-control': 'no-store',
     },
   });

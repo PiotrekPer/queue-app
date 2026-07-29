@@ -41,20 +41,24 @@ export function AddToWallet({ token, locale }: { token: string; locale: Locale }
   // Nothing sensible to offer (desktop / unknown) → render nothing.
   if (!platform) return null;
 
-  // Apple needs a signed .pkpass (Pass Type ID cert), which isn't built yet —
-  // so we show nothing on iOS rather than a button that 501s. Reinstate this
-  // branch together with `buildSignedPkpass` (docs/specs §9).
-  if (platform === 'apple') return null;
-
   // Same-origin route (mirrors `/a/[token]`): the signing key never leaves the
-  // server, and this works with or without a Supabase backend.
-  const passUrl = `/wallet/${encodeURIComponent(token)}?platform=google`;
+  // server. Google is signed in-app; Apple is signed by the notifier and streamed
+  // back as a .pkpass, so the two flows differ below.
+  const isApple = platform === 'apple';
+  const passUrl = `/wallet/${encodeURIComponent(token)}?platform=${isApple ? 'apple' : 'google'}`;
 
-  // Google: fetch the signed save-JWT first, then hand off to Google.
   const onSave = async () => {
     setError(null);
     setPending(true);
     try {
+      if (isApple) {
+        // iOS opens the "Add to Wallet" sheet on a top-level navigation to an
+        // http(s) URL whose response is application/vnd.apple.pkpass — a blob:
+        // URL does NOT trigger it. Navigate straight to the same-origin route.
+        window.location.href = passUrl;
+        return;
+      }
+      // Google: fetch the signed save-JWT first, then hand off to Google.
       const res = await fetch(passUrl, { headers: { accept: 'application/json' } });
       if (!res.ok) throw new Error('issue_failed');
       const { saveUrl } = (await res.json()) as { saveUrl?: string };
@@ -74,7 +78,7 @@ export function AddToWallet({ token, locale }: { token: string; locale: Locale }
         disabled={pending}
         className="flex min-h-[48px] w-full items-center justify-center rounded-control bg-ink px-5 font-ui text-body font-semibold text-paper-hi transition-opacity disabled:opacity-50"
       >
-        {pending ? c('walletAdding') : c('walletGoogle')}
+        {pending ? c('walletAdding') : isApple ? c('walletApple') : c('walletGoogle')}
       </button>
       {error ? (
         <p role="alert" className="mt-2 text-small text-danger-paper">
