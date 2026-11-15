@@ -1,7 +1,14 @@
 # Spec: Free "table ready" push (Web Push + Wallet passes)
 
-Status: **scaffolded — blocked on credentials** (see §11 for what's built and §6
-for what must be provisioned). Decisions in §7 are settled.
+Status: **implemented — blocked only on real credentials** (updated 2026-07-29).
+Web Push (client subscribe + notifier send), Google Wallet (save-URL + silent-PATCH
+vs 3/24h notify), and Apple Wallet (`.pkpass` PKCS#7 signing + APNs pass-update) are
+all coded, typecheck/deno-check/unit-tested, and adversarially reviewed; migrations
+0008–0009 are applied + runtime-verified against a live local Postgres. What remains
+is provisioning (VAPID keys; a Google Wallet issuer + service account; an Apple Pass
+Type cert + WWDR + APNs `.p8`) and real pass icons (a 1×1 placeholder ships today).
+See §11 for the per-channel state and §6 for what to provision. Decisions in §7 are
+settled.
 Owner: TBD · Relates to CLAUDE.md §7 (notification choreography), §4 (data model),
 §1 (guest contract), §13 (milestones).
 
